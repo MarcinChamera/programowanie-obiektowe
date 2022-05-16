@@ -55,10 +55,15 @@ public class MCSimulation implements Simulation {
         double totalEnergy = calculateTotalEnergy(latticeParametersImpl.lattice());
         latticeParametersImpl.setTotalEnergy(totalEnergy);
         int acceptances = 0;
-        Random random = new Random();
-        for (int step = 1; step <= steps; step++) {
-            acceptanceRatio = acceptances / step;
+        int acceptanceRatio = 0;
+        Random random; 
+        for (int step = 0; step < steps; step++) {
+            if (step > 0) {
+                acceptanceRatio = acceptances / step;
+            }
+            System.out.println(acceptanceRatio); 
             double deltaE = 0;
+            random = new Random();
             int magnetRowRandom = random.nextInt((int)Math.sqrt(magnetsCount));
             int magnetColRandom = random.nextInt((int)Math.sqrt(magnetsCount));
             int[][] newLattice = generateLatticeCopy(latticeParametersImpl.lattice());
