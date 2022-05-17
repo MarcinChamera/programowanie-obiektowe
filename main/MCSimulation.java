@@ -11,10 +11,9 @@ public class MCSimulation implements Simulation {
     private ProbabilityFormula formula;
     private double TkB;
     private double Ce;
-    ArrayList<Double> Cn;
+    private ArrayList<Double> Cn;
     private double externalFieldAngle;
     private int magnetsCount;
-    private int acceptanceRatio;
 
     public MCSimulation() {
 
@@ -54,8 +53,8 @@ public class MCSimulation implements Simulation {
     public void executeMCSteps(int steps) {
         double totalEnergy = calculateTotalEnergy(latticeParametersImpl.lattice());
         latticeParametersImpl.setTotalEnergy(totalEnergy);
-        int acceptances = 0;
-        int acceptanceRatio = 0;
+        double acceptances = 0;
+        double acceptanceRatio = 0;
         Random random; 
         for (int step = 0; step < steps; step++) {
             if (step > 0) {
@@ -83,33 +82,34 @@ public class MCSimulation implements Simulation {
                     }
                     int magnetStateChange = random.nextBoolean() ? 1 : -1;
                     int magnetStateChange2 = random.nextBoolean() ? 1 : -1;
-                    newLattice[magnetRowRandom][magnetColRandom] += magnetStateChange;
-                    newLattice[magnetRowRandom2][magnetColRandom2] += magnetStateChange2;
+                    changeMagnetState(newLattice, magnetRowRandom, magnetColRandom, magnetStateChange);
+                    changeMagnetState(newLattice, magnetRowRandom2, magnetColRandom2, magnetStateChange2);
                     deltaE = calculateTotalEnergy(newLattice) - calculateTotalEnergy(latticeParametersImpl.lattice());
                 } else {
                     int magnetStateChange = random.nextBoolean() ? 2 : -2;
-                    newLattice[magnetRowRandom][magnetColRandom] += magnetStateChange;
+                    changeMagnetState(newLattice, magnetRowRandom, magnetColRandom, magnetStateChange);
                     // TODO Zmienic liczenie deltaE z calculateTotalEnergy na Ei, czyli energia jednego magnesu - tylko jaki jest wzór na to Ei? :)
                     deltaE = calculateTotalEnergy(newLattice) - calculateTotalEnergy(latticeParametersImpl.lattice());
                 }
             } else {
                 int magnetStateChange = random.nextBoolean() ? 1 : -1;
-                newLattice[magnetRowRandom][magnetColRandom] += magnetStateChange;
-                    // TODO Zmienic liczenie deltaE z calculateTotalEnergy na Ei, czyli energia jednego magnesu - tylko jaki jest wzór na to Ei? :)
-                    deltaE = calculateTotalEnergy(newLattice) - calculateTotalEnergy(latticeParametersImpl.lattice());
+                changeMagnetState(newLattice, magnetRowRandom, magnetColRandom, magnetStateChange);
+                // TODO Zmienic liczenie deltaE z calculateTotalEnergy na Ei, czyli energia jednego magnesu - tylko jaki jest wzór na to Ei? :)
+                deltaE = calculateTotalEnergy(newLattice) - calculateTotalEnergy(latticeParametersImpl.lattice());
             }
             double R = Math.random();
             double P = calculateP(formula, deltaE, TkB);
             if (R < P) {
                 totalEnergy += deltaE;
                 latticeParametersImpl.setTotalEnergy(totalEnergy);
+                latticeParametersImpl.setLattice(newLattice);
                 acceptances++;
             }
         }
     }
 
     private double calculateTotalEnergy(int[][] lattice) {
-        double totalEnergy = -1/2;
+        double totalEnergy = -0.5;
         double nSum = 0;
         for (int n = 1; n < Cn.size(); n++) {
             double iSum = 0;
@@ -236,6 +236,20 @@ public class MCSimulation implements Simulation {
             } else {
                 return 1;
             }
+        }
+    }
+
+    private void changeMagnetState(int[][] lattice, int magnetRow, int magnetCol, int change) {
+        int availableStates = latticeParametersImpl.states();
+        int currentState = lattice[magnetRow][magnetCol];
+        if (currentState + change >= availableStates || currentState + change < 0) {
+            if (currentState + change >= availableStates) {
+                lattice[magnetRow][magnetCol] = currentState + change - availableStates;
+            } else {
+                lattice[magnetRow][magnetCol] = availableStates + change;
+            }
+        } else {
+            lattice[magnetRow][magnetCol] += change;
         }
     }
 

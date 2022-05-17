@@ -9,13 +9,13 @@ import java.util.List;
  */
 public class RunSimulation {
     public static void main(String[] args) {
-        int steps = 100;
+        int steps = 5000;
         double TkB = 2.5;
         ProbabilityFormula formula = ProbabilityFormula.GLAUBER;
         int states = 2;
-        int size = 32;
+        int size = 10;
         double externaFieldAngle = 0;
-        int[][] lattice = prepareArrangedLattice(size);
+        int[][] lattice = prepareArrangedLattice(size, 1);
         List<Double> parameters = new ArrayList<Double>();
         // Współczynnik oddziaływania z zewnętrznym polem
         Double Ce = 0.;
@@ -41,13 +41,14 @@ public class RunSimulation {
         mcSimulation.executeMCSteps(steps);
         double EEnd = mcSimulation.getState().totalEnergy();
         System.out.println("Energia po MC: " + Double.toString(EEnd)); 
+        System.out.println("Energia na jeden magnes: " + Double.toString(EEnd / (size * size)));
     }
 
-    private static int[][] prepareArrangedLattice(int size) {
+    private static int[][] prepareArrangedLattice(int size, int state) {
         int[][] lattice = new int[size][size];
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
-                lattice[i][j] = 0;
+                lattice[i][j] = state;
             }
         }
         return lattice;
