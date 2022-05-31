@@ -53,15 +53,11 @@ public class MCSimulation implements main.Simulation {
         latticeParametersImpl.setTotalEnergy(totalEnergy);
         double acceptances = 0;
         double acceptanceRatio = 0;
-        // double orderParameter = 0;
         Random random; 
         for (int step = 0; step < steps; step++) {
-            // orderParameter += calculateOrderParameter();
-            // System.out.println(orderParameter); 
             if (step > 0) {
                 acceptanceRatio = acceptances / step;
             }
-            // System.out.println(acceptanceRatio); 
             double deltaE = 0;
             random = new Random();
             int magnetRowRandom = random.nextInt((int)Math.sqrt(magnetsCount));
@@ -105,37 +101,24 @@ public class MCSimulation implements main.Simulation {
                 acceptances++;
             }
         }
-        // System.out.println("Order parameter srednia: " + orderParameter / steps);
     }
 
     private double calculateEi(int[][] lattice, int i_row, int i_col) {
         double Ei = 0;
-        int tmp_neighboursStatesSize = 0;
-        int tmp_j = 0;
-        try {
-            for (int n = 0; n < magnetsCount; n++) {
-                ArrayList<Integer> neighboursStates = getNeighboursStates(lattice, i_row, i_col, n);
-                tmp_neighboursStatesSize = neighboursStates.size();
-                for (int j = 0; j < neighboursStates.size(); j++) { 
-                    tmp_j = j;
-                    double alphaI = getAngleInRadians(latticeParametersImpl.magnetState(i_row, i_col));
-                    double alphaJ = getAngleInRadians(neighboursStates.get(j));
-                    double current_Cn = 0;
-                    if (n < Cn.size()) {
-                        current_Cn = Cn.get(n);
-                    }
-                    Ei -= current_Cn * Math.cos(alphaI - alphaJ);
+        for (int n = 0; n < magnetsCount; n++) {
+            ArrayList<Integer> neighboursStates = getNeighboursStates(lattice, i_row, i_col, n);
+            for (int j = 0; j < neighboursStates.size(); j++) { 
+                double alphaI = getAngleInRadians(latticeParametersImpl.magnetState(i_row, i_col));
+                double alphaJ = getAngleInRadians(neighboursStates.get(j));
+                double current_Cn = 0;
+                if (n < Cn.size()) {
+                    current_Cn = Cn.get(n);
                 }
+                Ei -= current_Cn * Math.cos(alphaI - alphaJ);
             }
-            // odtąd
-            Ei *= 0.5;
-        } catch(Exception exception) {
-            System.out.println("Exception: " + exception + " dla i_row=" + Double.toString(i_row) + " i_col=" + Double.toString(i_col) + " tmp_neighboursStatesSize=" + Integer.toString(tmp_neighboursStatesSize) + " tmp_j=" + Integer.toString(tmp_j));
         }
-            
         double alphaI = getAngleInRadians(latticeParametersImpl.magnetState(i_row, i_col));
         Ei -= Ce * Math.cos(alphaI - externalFieldAngle);
-        // dotąd - nie wiem czy ma to być czy nie
         return Ei;
     }
 
@@ -173,33 +156,182 @@ public class MCSimulation implements main.Simulation {
         return totalEnergy;
     }
 
+    // dodac sasiadow po przeciwnej stronie jesli to jest brzeg - jedyne miejsce w ktorym trzeba uwzglednic ksztalt torusa
     private ArrayList<Integer> getNeighboursStates(int[][] lattice, int magnetRow, int magnetCol, int level) {
         ArrayList<Integer> neighboursStates = new ArrayList<Integer>();
         if (level == 1) {
+            // gora
             if (magnetRow > 0) neighboursStates.add(lattice[magnetRow - 1][magnetCol]);
+            else neighboursStates.add(lattice[lattice.length - 1][magnetCol]);
+
+            // dol
             if (magnetRow < lattice.length - 1) neighboursStates.add(lattice[magnetRow + 1][magnetCol]);
+            else neighboursStates.add(lattice[0][magnetCol]);
+
+            // lewo
             if (magnetCol > 0) neighboursStates.add(lattice[magnetRow][magnetCol - 1]);
+            else neighboursStates.add(lattice[magnetRow][lattice.length - 1]);
+
+            // prawo
             if (magnetCol < lattice.length - 1) neighboursStates.add(lattice[magnetRow][magnetCol + 1]);
+            else neighboursStates.add(lattice[magnetRow][0]);
 
         } else if (level == 2) {
+            // gora-lewo
             if (magnetRow > 0 && magnetCol > 0) neighboursStates.add(lattice[magnetRow - 1][magnetCol - 1]);
+            else if (magnetRow == 0 && magnetCol > 0) neighboursStates.add(lattice[lattice.length - 1][magnetCol - 1]);
+            else if (magnetRow > 0 && magnetCol == 0) neighboursStates.add(lattice[magnetRow - 1][lattice.length - 1]);
+            else if (magnetRow == 0 && magnetCol == 0) neighboursStates.add(lattice[lattice.length - 1][lattice.length - 1]);
+            
+            // dol-lewo
             if (magnetRow < lattice.length - 1 && magnetCol > 0) neighboursStates.add(lattice[magnetRow + 1][magnetCol - 1]);
-            if (magnetRow > 0 && magnetCol < lattice.length - 1) neighboursStates.add(lattice[magnetRow][magnetCol - 1]);
-            if (magnetRow < lattice.length - 1 && magnetCol < lattice.length - 1) neighboursStates.add(lattice[magnetRow][magnetCol + 1]);
+            else if (magnetRow < lattice.length - 1 && magnetCol == 0) neighboursStates.add(lattice[magnetRow + 1][lattice.length - 1]);
+            else if (magnetRow == lattice.length - 1 && magnetCol == 0) neighboursStates.add(lattice[0][lattice.length - 1]);
+            else if (magnetRow == lattice.length - 1 && magnetCol > 0) neighboursStates.add(lattice[0][magnetCol - 1]);
+
+            // gora-prawo
+            if (magnetRow > 0 && magnetCol < lattice.length - 1) neighboursStates.add(lattice[magnetRow - 1][magnetCol + 1]);
+            else if (magnetRow > 0 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[magnetRow - 1][0]);
+            else if (magnetRow == 0 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[lattice.length - 1][0]);
+            else if (magnetRow == 0 && magnetCol < lattice.length - 1) neighboursStates.add(lattice[lattice.length - 1][magnetCol + 1]);
+
+            // dol-prawo
+            if (magnetRow < lattice.length - 1 && magnetCol < lattice.length - 1) neighboursStates.add(lattice[magnetRow + 1][magnetCol + 1]);
+            else if (magnetRow < lattice.length - 1 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[magnetRow + 1][0]);
+            else if (magnetRow == lattice.length - 1 && magnetCol < lattice.length - 1) neighboursStates.add(lattice[0][magnetCol + 1]);
+            else if (magnetRow == lattice.length - 1 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[0][0]);
 
         } else if (level == 3) {
+            // gora
             if (magnetRow > 1) neighboursStates.add(lattice[magnetRow - 2][magnetCol]);
+            else if (magnetRow == 1) neighboursStates.add(lattice[lattice.length - 1][magnetCol]);
+            else neighboursStates.add(lattice[lattice.length - 2][magnetCol]);
+
+            // dol
             if (magnetRow < lattice.length - 2) neighboursStates.add(lattice[magnetRow + 2][magnetCol]);
+            else if (magnetRow == lattice.length - 2) neighboursStates.add(lattice[0][magnetCol]);
+            else neighboursStates.add(lattice[1][magnetCol]);
+
+            // lewo
             if (magnetCol > 1) neighboursStates.add(lattice[magnetRow][magnetCol - 2]);
+            else if (magnetCol == 1) neighboursStates.add(lattice[magnetRow][lattice.length - 1]);
+            else neighboursStates.add(lattice[magnetRow][lattice.length - 2]);
+            
+            // prawo
             if (magnetCol < lattice.length - 2) neighboursStates.add(lattice[magnetRow][magnetCol + 2]);
+            else if (magnetCol == lattice.length - 2) neighboursStates.add(lattice[magnetRow][0]);
+            else neighboursStates.add(lattice[magnetRow][1]);
 
         } else if (level == 4) {
+            // 1 do gory, 2 w lewo
             if (magnetRow > 0 && magnetCol > 1) neighboursStates.add(lattice[magnetRow - 1][magnetCol - 2]);
+            else if (magnetRow > 0 && magnetCol == 1) neighboursStates.add(lattice[magnetRow - 1][lattice.length - 1]);
+            else if (magnetRow > 0 && magnetCol == 0) neighboursStates.add(lattice[magnetRow - 1][lattice.length - 2]);
+            else if (magnetRow == 0 && magnetCol > 1) neighboursStates.add(lattice[lattice.length - 1][magnetCol - 2]);
+            else if (magnetRow == 0 && magnetCol == 1) neighboursStates.add(lattice[lattice.length - 1][lattice.length - 1]);
+            else if (magnetRow == 0 && magnetCol == 0) neighboursStates.add(lattice[lattice.length - 1][lattice.length - 2]);
+
+            // 1 w dol, 2 w lewo
             if (magnetRow < lattice.length - 1 && magnetCol > 1) neighboursStates.add(lattice[magnetRow + 1][magnetCol - 2]);
-            if (magnetRow > 0 && magnetCol < lattice.length - 2) neighboursStates.add(lattice[magnetRow][magnetCol - 2]);
-            if (magnetRow < lattice.length - 1 && magnetCol < lattice.length - 2) neighboursStates.add(lattice[magnetRow][magnetCol + 2]);
+            else if (magnetRow < lattice.length - 1 && magnetCol == 1) neighboursStates.add(lattice[magnetRow + 1][lattice.length - 1]);
+            else if (magnetRow < lattice.length - 1 && magnetCol == 0) neighboursStates.add(lattice[magnetRow + 1][lattice.length - 2]);
+            else if (magnetRow == lattice.length - 1 && magnetCol > 1) neighboursStates.add(lattice[0][magnetCol - 2]);
+            else if (magnetRow == lattice.length - 1 && magnetCol == 1) neighboursStates.add(lattice[0][lattice.length - 1]);
+            else if (magnetRow == lattice.length - 1 && magnetCol == 0) neighboursStates.add(lattice[0][lattice.length - 2]);
+
+            // 1 w gore, 2 w prawo
+            if (magnetRow > 0 && magnetCol < lattice.length - 2) neighboursStates.add(lattice[magnetRow - 1][magnetCol + 2]);
+            else if (magnetRow > 0 && magnetCol == lattice.length - 2) neighboursStates.add(lattice[magnetRow - 1][0]);
+            else if (magnetRow > 0 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[magnetRow - 1][1]);
+            else if (magnetRow == 0 && magnetCol < lattice.length - 2) neighboursStates.add(lattice[lattice.length - 1][magnetCol + 2]);
+            else if (magnetRow == 0 && magnetCol == lattice.length - 2) neighboursStates.add(lattice[lattice.length - 1][0]);
+            else if (magnetRow == 0 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[lattice.length - 1][1]);
+
+            // 1 w dol, 2 w prawo
+            if (magnetRow < lattice.length - 1 && magnetCol < lattice.length - 2) neighboursStates.add(lattice[magnetRow + 1][magnetCol + 2]);
+            else if (magnetRow < lattice.length - 1 && magnetCol == lattice.length - 2) neighboursStates.add(lattice[magnetRow + 1][0]);
+            else if (magnetRow < lattice.length - 1 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[magnetRow + 1][1]);
+            else if (magnetRow == lattice.length - 1 && magnetCol < lattice.length - 2) neighboursStates.add(lattice[0][magnetCol + 2]);
+            else if (magnetRow == lattice.length - 1 && magnetCol == lattice.length - 2) neighboursStates.add(lattice[0][0]);
+            else if (magnetRow == lattice.length - 1 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[0][1]);
+
+            // 2 w gore, 1 w lewo
+            if (magnetRow > 1 && magnetCol > 0) neighboursStates.add(lattice[magnetRow - 2][magnetCol - 1]);
+            else if (magnetRow == 1 && magnetCol > 0) neighboursStates.add(lattice[lattice.length - 1][magnetCol - 1]);
+            else if (magnetRow == 0 && magnetCol > 0) neighboursStates.add(lattice[lattice.length - 2][magnetCol - 1]);
+            else if (magnetRow > 1 && magnetCol == 0) neighboursStates.add(lattice[magnetRow - 2][lattice.length - 1]);
+            else if (magnetRow == 1 && magnetCol == 0) neighboursStates.add(lattice[lattice.length - 1][lattice.length - 1]);
+            else if (magnetRow == 0 && magnetCol == 0) neighboursStates.add(lattice[lattice.length - 2][lattice.length - 1]);
+
+            // 2 w dol, 1 w lewo
+            if (magnetRow < lattice.length - 2 && magnetCol > 0) neighboursStates.add(lattice[magnetRow + 2][magnetCol - 1]);
+            else if (magnetRow == lattice.length - 2 && magnetCol > 0) neighboursStates.add(lattice[0][magnetCol - 1]);
+            else if (magnetRow == lattice.length - 1 && magnetCol > 0) neighboursStates.add(lattice[1][magnetCol - 1]);
+            else if (magnetRow < lattice.length - 2 && magnetCol == 0) neighboursStates.add(lattice[magnetRow + 2][lattice.length - 1]);
+            else if (magnetRow == lattice.length - 2 && magnetCol == 0) neighboursStates.add(lattice[0][lattice.length - 1]);
+            else if (magnetRow == lattice.length - 1 && magnetCol == 0) neighboursStates.add(lattice[1][lattice.length - 1]);
+
+            // 2 w gore, 1 w prawo
+            if (magnetRow > 1 && magnetCol < lattice.length - 1) neighboursStates.add(lattice[magnetRow - 2][magnetCol + 1]);
+            else if (magnetRow == 1 && magnetCol < lattice.length - 1) neighboursStates.add(lattice[lattice.length - 1][magnetCol + 1]);
+            else if (magnetRow == 0 && magnetCol < lattice.length - 1) neighboursStates.add(lattice[lattice.length - 2][magnetCol + 1]);
+            else if (magnetRow > 1 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[magnetRow - 2][0]);
+            else if (magnetRow == 1 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[lattice.length - 1][0]);
+            else if (magnetRow == 0 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[lattice.length - 2][0]);
+
+            // 2 w dol, 1 w prawo
+            if (magnetRow < lattice.length - 2 && magnetCol < lattice.length - 1) neighboursStates.add(lattice[magnetRow + 2][magnetCol + 1]);
+            else if (magnetRow == lattice.length - 2 && magnetCol < lattice.length - 1) neighboursStates.add(lattice[0][magnetCol + 1]);
+            else if (magnetRow == lattice.length - 1 && magnetCol < lattice.length - 1) neighboursStates.add(lattice[1][magnetCol + 1]);
+            else if (magnetRow < lattice.length - 2 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[magnetRow + 2][0]);
+            else if (magnetRow == lattice.length - 2 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[0][0]);
+            else if (magnetRow == lattice.length - 1 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[1][0]);
+
+        } else if (level == 5) {
+            // gora-lewo
+            if (magnetRow > 1 && magnetCol > 1) neighboursStates.add(lattice[magnetRow - 2][magnetCol - 2]);
+            else if (magnetRow == 1 && magnetCol > 1) neighboursStates.add(lattice[lattice.length - 1][magnetCol - 2]);
+            else if (magnetRow == 0 && magnetCol > 1) neighboursStates.add(lattice[lattice.length - 2][magnetCol - 2]);
+            else if (magnetRow > 1 && magnetCol == 1) neighboursStates.add(lattice[magnetRow - 2][lattice.length - 1]);
+            else if (magnetRow == 1 && magnetCol == 1) neighboursStates.add(lattice[lattice.length - 1][lattice.length - 1]);
+            else if (magnetRow == 0 && magnetCol == 1) neighboursStates.add(lattice[lattice.length - 2][lattice.length - 1]);
+            else if (magnetRow > 1 && magnetCol == 0) neighboursStates.add(lattice[magnetRow - 2][lattice.length - 2]);
+            else if (magnetRow == 1 && magnetCol == 0) neighboursStates.add(lattice[lattice.length - 1][lattice.length - 2]);
+            else if (magnetRow == 0 && magnetCol == 0) neighboursStates.add(lattice[lattice.length - 2][lattice.length - 2]);
+            
+            // dol-lewo
+            if (magnetRow < lattice.length - 2 && magnetCol > 1) neighboursStates.add(lattice[magnetRow + 2][magnetCol - 2]);
+            if (magnetRow == lattice.length - 2 && magnetCol > 1) neighboursStates.add(lattice[0][magnetCol - 2]);
+            if (magnetRow == lattice.length - 1 && magnetCol > 1) neighboursStates.add(lattice[1][magnetCol - 2]);
+            if (magnetRow < lattice.length - 2 && magnetCol == 1) neighboursStates.add(lattice[magnetRow + 2][lattice.length - 1]);
+            if (magnetRow == lattice.length - 2 && magnetCol == 1) neighboursStates.add(lattice[0][lattice.length - 1]);
+            if (magnetRow == lattice.length - 1 && magnetCol == 1) neighboursStates.add(lattice[1][lattice.length - 1]);
+            if (magnetRow < lattice.length - 2 && magnetCol == 0) neighboursStates.add(lattice[magnetRow + 2][lattice.length - 2]);
+            if (magnetRow == lattice.length - 2 && magnetCol == 0) neighboursStates.add(lattice[0][lattice.length - 2]);
+            if (magnetRow == lattice.length - 1 && magnetCol == 0) neighboursStates.add(lattice[1][lattice.length - 2]);
+
+            // gora-prawo
+            if (magnetRow > 1 && magnetCol < lattice.length - 2) neighboursStates.add(lattice[magnetRow - 2][magnetCol + 2]);
+            if (magnetRow == 1 && magnetCol < lattice.length - 2) neighboursStates.add(lattice[lattice.length - 1][magnetCol + 2]);
+            if (magnetRow == 0 && magnetCol < lattice.length - 2) neighboursStates.add(lattice[lattice.length - 2][magnetCol + 2]);
+            if (magnetRow > 1 && magnetCol == lattice.length - 2) neighboursStates.add(lattice[magnetRow - 2][0]);
+            if (magnetRow == 1 && magnetCol == lattice.length - 2) neighboursStates.add(lattice[lattice.length - 1][0]);
+            if (magnetRow == 0 && magnetCol == lattice.length - 2) neighboursStates.add(lattice[lattice.length - 2][0]);
+            if (magnetRow > 1 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[magnetRow - 2][1]);
+            if (magnetRow == 1 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[lattice.length - 1][1]);
+            if (magnetRow == 0 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[lattice.length - 2][1]);
+
+            // dol-prawo
+            if (magnetRow < lattice.length - 2 && magnetCol < lattice.length - 2) neighboursStates.add(lattice[magnetRow + 2][magnetCol + 2]);
+            if (magnetRow == lattice.length - 2 && magnetCol < lattice.length - 2) neighboursStates.add(lattice[0][magnetCol + 2]);
+            if (magnetRow == lattice.length - 1 && magnetCol < lattice.length - 2) neighboursStates.add(lattice[1][magnetCol + 2]);
+            if (magnetRow < lattice.length - 2 && magnetCol == lattice.length - 2) neighboursStates.add(lattice[magnetRow + 2][0]);
+            if (magnetRow == lattice.length - 2 && magnetCol == lattice.length - 2) neighboursStates.add(lattice[0][0]);
+            if (magnetRow == lattice.length - 1 && magnetCol == lattice.length - 2) neighboursStates.add(lattice[1][0]);
+            if (magnetRow < lattice.length - 2 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[magnetRow + 2][1]);
+            if (magnetRow == lattice.length - 2 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[0][1]);
+            if (magnetRow == lattice.length - 1 && magnetCol == lattice.length - 1) neighboursStates.add(lattice[1][1]);
         }
-        // TODO jak to zrobić dla wszystkich poziomów?
         return neighboursStates;
     }
 
@@ -238,6 +370,7 @@ public class MCSimulation implements main.Simulation {
         return Math.sqrt(xAvg * xAvg + yAvg * yAvg);
     }
 
+    // TODO to ma byc suma dla wszystkich magnesów
     private double calculateNearestNeighbourOrder(int magnetRow, int magnetCol) {
         int[][] lattice = latticeParametersImpl.lattice();
         ArrayList<Integer> neighboursStates = getNeighboursStates(lattice, magnetRow, magnetCol, 1);
@@ -312,7 +445,8 @@ public class MCSimulation implements main.Simulation {
         public double nearestNeighbourOrder() {
             if (_nearestNeighbourOrder == 0) {
                 // Dlaczego ta metoda nearestNeighbourOrder nie przyjmuje argumentów określających, o który magnes konkretnie chodzi?
-                _nearestNeighbourOrder = calculateNearestNeighbourOrder(0, 0);
+                _nearestNeighbourOrder = calculateNearestNeighbourOrder(_lattice.length / 2 - 1, _lattice.length / 2 - 1);
+                // _nearestNeighbourOrder = calculateNearestNeighbourOrder(0, 0);
             }
             return _nearestNeighbourOrder;
         }
