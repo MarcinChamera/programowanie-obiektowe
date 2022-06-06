@@ -412,14 +412,15 @@ public class MCSimulation implements main.Simulation {
         return Math.sqrt(xAvg * xAvg + yAvg * yAvg);
     }
 
-    private double calculateNearestNeighbourOrder(int magnetRow, int magnetCol) {
+    private double calculateNearestNeighbourOrder() {
         int[][] lattice = latticeParametersImpl.lattice();
-        ArrayList<Integer> neighboursStates = getNeighboursStates(lattice, magnetRow, magnetCol, 1);
+        ArrayList<Integer> neighboursStates = getNeighboursStates(lattice, 0, 0, 1);
         double onn = 1. / (double)(magnetsCount * neighboursStates.size());
         double iSum = 0;
         for (int i_row = 0; i_row < Math.sqrt(magnetsCount); i_row++) {
             for (int i_col = 0; i_col < Math.sqrt(magnetsCount); i_col++) {
                 double jSum = 0;
+                neighboursStates = getNeighboursStates(lattice, i_row, i_col, 1);
                 for (int j = 0; j < neighboursStates.size(); j++) {
                     double alphaI = getAngleInRadians(lattice[i_row][i_col]);
                     double alphaJ = getAngleInRadians(neighboursStates.get(j));
@@ -479,7 +480,7 @@ public class MCSimulation implements main.Simulation {
 
         @Override
         public double nearestNeighbourOrder() {
-            return calculateNearestNeighbourOrder(0, 0);
+            return calculateNearestNeighbourOrder();
         }
 
         @Override
