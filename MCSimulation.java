@@ -1,10 +1,5 @@
 import java.util.ArrayList;
 import java.util.List;
-// import java.io.FileNotFoundException;
-// import java.io.FileOutputStream;
-// import java.io.FileWriter;
-// import java.io.IOException;
-// import java.io.ObjectOutputStream;
 import java.lang.Math;
 import java.util.Random;
 
@@ -17,11 +12,6 @@ public class MCSimulation implements main.Simulation {
     private List<Double> Cn;
     private double externalFieldAngle;
     private int magnetsCount;
-    private int steps;
-    int ACCEPTANCE_STATISTICS = steps / 100;
-    int stateChangesAccepted = 0;
-    int positionsChangedInTestStep = 1;
-    // private ArrayList<Double> totalEnergies = new ArrayList<>();
 
     public MCSimulation() {
 
@@ -37,7 +27,6 @@ public class MCSimulation implements main.Simulation {
     @Override
     public void setEnergyParameters(List<Double> parameters, double externaFieldAngle) {
         Ce = parameters.get(0);
-        // Tutaj dla Cn element z zerowym indeksem to Ce. C1, C2 itd są kolejno z pierwszym, drugim, ... indeksem
         Cn = parameters;
         externalFieldAngle = externaFieldAngle;
     }
@@ -57,29 +46,8 @@ public class MCSimulation implements main.Simulation {
         return latticeParametersImpl;
     }
 
-    // private void acceptanceOptimization(int step) {
-    //     if (stateChangesAccepted * 2 > ACCEPTANCE_STATISTICS)
-    //         positionsChangedInTestStep++; // ile magnesow ma sie zmienic w kroku (p.Oramus nie zmienia kata o ile maja sie zmienic magnesy a jedynie ich liczbe)
-    //     else
-    //         positionsChangedInTestStep--;
-    //     stateChangesAccepted = 0;
-    // }
-
-    // private void saveEnergiesToFile() throws FileNotFoundException {
-    //     try {
-    //         FileWriter writer = new FileWriter("output.txt"); 
-    //         for(Double energy: totalEnergies) {
-    //         writer.write(Double.toString(energy) + System.lineSeparator());
-    //         }
-    //         writer.close();
-    //     } catch (IOException ex) {
-    //         ex.printStackTrace();
-    //     }
-    // }
-
     @Override
     public void executeMCSteps(int steps) {
-        // this.steps = steps;
         double totalEnergy = latticeParametersImpl.totalEnergy();
         latticeParametersImpl.setTotalEnergy(totalEnergy);
         double acceptances = 0;
@@ -95,36 +63,21 @@ public class MCSimulation implements main.Simulation {
             int magnetColRandom = random.nextInt((int)Math.sqrt(magnetsCount));
             int[][] newLattice = generateLatticeCopy(latticeParametersImpl.lattice());
             if (acceptanceRatio > 0.5) {
-                boolean moreThanOneMagnet = true;
-                // boolean moreThanOneMagnet = random.nextBoolean();
-                // Jeśli są tylko dwa dostępne kąty dla magnesu, to nie ma sensu zmiana tego kąta o więcej niż jeden - dlatego należy
-                // zmienić dwa magnesy.
-                if (latticeParametersImpl.states() == 2) {
-                    moreThanOneMagnet = true;
+                int magnetRowRandom2 = random.nextInt((int)Math.sqrt(magnetsCount));
+                int magnetColRandom2 = random.nextInt((int)Math.sqrt(magnetsCount));
+                while (magnetRowRandom == magnetRowRandom2 && magnetColRandom == magnetColRandom2) {
+                    magnetRowRandom2 = random.nextInt((int)Math.sqrt(magnetsCount));
+                    magnetColRandom2 = random.nextInt((int)Math.sqrt(magnetsCount));
                 }
-                if (moreThanOneMagnet) {
-                    int magnetRowRandom2 = random.nextInt((int)Math.sqrt(magnetsCount));
-                    int magnetColRandom2 = random.nextInt((int)Math.sqrt(magnetsCount));
-                    while (magnetRowRandom == magnetRowRandom2 && magnetColRandom == magnetColRandom2) {
-                        magnetRowRandom2 = random.nextInt((int)Math.sqrt(magnetsCount));
-                        magnetColRandom2 = random.nextInt((int)Math.sqrt(magnetsCount));
-                    }
-                    int magnetStateChange = random.nextBoolean() ? 1 : -1;
-                    int magnetStateChange2 = random.nextBoolean() ? 1 : -1;
-                    changeMagnetState(newLattice, magnetRowRandom, magnetColRandom, magnetStateChange);
-                    changeMagnetState(newLattice, magnetRowRandom2, magnetColRandom2, magnetStateChange2);
-                    deltaE = calculateTotalEnergy(newLattice) - totalEnergy;
-                } else {
-                    int magnetStateChange = random.nextBoolean() ? 2 : -2;
-                    changeMagnetState(newLattice, magnetRowRandom, magnetColRandom, magnetStateChange);
-                    // deltaE = calculateTotalEnergy(newLattice) - totalEnergy;
-                    deltaE = calculateEi(newLattice, magnetRowRandom, magnetColRandom) - calculateEi(latticeParametersImpl.lattice(), magnetRowRandom, magnetColRandom);
-                }
+                int magnetStateChange = random.nextBoolean() ? 1 : -1;
+                int magnetStateChange2 = random.nextBoolean() ? 1 : -1;
+                changeMagnetState(newLattice, magnetRowRandom, magnetColRandom, magnetStateChange);
+                changeMagnetState(newLattice, magnetRowRandom2, magnetColRandom2, magnetStateChange2);
+                deltaE = calculateTotalEnergy(newLattice) - totalEnergy;
             } else {
                 int magnetStateChange = random.nextBoolean() ? 1 : -1;
                 changeMagnetState(newLattice, magnetRowRandom, magnetColRandom, magnetStateChange);
                 deltaE = calculateEi(newLattice, magnetRowRandom, magnetColRandom) - calculateEi(latticeParametersImpl.lattice(), magnetRowRandom, magnetColRandom);
-                // deltaE = calculateTotalEnergy(newLattice) - totalEnergy;
             }
             double R = random.nextDouble();
             double P = calculateP(formula, deltaE, TkB);
@@ -133,17 +86,8 @@ public class MCSimulation implements main.Simulation {
                 latticeParametersImpl.setTotalEnergy(totalEnergy);
                 latticeParametersImpl.setLattice(newLattice);
                 acceptances++;
-                // stateChangesAccepted++;
             }
-            // acceptanceOptimization(step);
-            // totalEnergies.add(totalEnergy);
         }
-        // try {
-        //     saveEnergiesToFile();
-        // } catch (FileNotFoundException e) {
-        //     // TODO Auto-generated catch block
-        //     e.printStackTrace();
-        // }
     }
 
     private double calculateEi(int[][] lattice, int i_row, int i_col) {
@@ -156,13 +100,9 @@ public class MCSimulation implements main.Simulation {
                 Ei -= Cn.get(n) * Math.cos(alphaI - alphaJ);
             }
         }
-        Ei *= 0.5;
-        double alphaI = getAngleInRadians(lattice[i_row][i_col]);
-        Ei -= Ce * Math.cos(alphaI - externalFieldAngle);
         return Ei;
     }
 
-    // dobrze, bo poczatkowa energia na jeden magnes poprawna
     private double calculateTotalEnergy(int[][] lattice) {
         double totalEnergy = -0.5;
         double nSum = 0;
@@ -197,7 +137,6 @@ public class MCSimulation implements main.Simulation {
         return totalEnergy;
     }
 
-    // dobrze, bo wykorzystywane w calculateTotalEnergy
     private ArrayList<Integer> getNeighboursStates(int[][] lattice, int magnetRow, int magnetCol, int level) {
         ArrayList<Integer> neighboursStates = new ArrayList<Integer>();
         if (level == 1) {
@@ -376,7 +315,6 @@ public class MCSimulation implements main.Simulation {
         return neighboursStates;
     }
 
-    // dobrze bo calculateTotalEnergy dobrze
     private double getAngleInRadians(int magnetState) {
         return 2 * Math.PI * magnetState / latticeParametersImpl.states();
     }
@@ -491,10 +429,6 @@ public class MCSimulation implements main.Simulation {
         protected int states() {
             return _states;
         }
-
-        // protected int magnetState(int[][] lattice, int magnetRow, int magnetCol) {
-        //     return lattice[magnetRow][magnetCol];
-        // }
 
         protected void setLattice(int[][] lattice) {
             _lattice = new int[lattice.length][lattice.length];
