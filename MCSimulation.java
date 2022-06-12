@@ -9,8 +9,6 @@ public class MCSimulation implements main.Simulation {
     private ProbabilityFormula formula;
     private double TkB;
     private double Ce;
-    private List<Double> Cn;
-    private double externalFieldAngle;
     private int magnetsCount;
 
     public MCSimulation() {
@@ -27,8 +25,8 @@ public class MCSimulation implements main.Simulation {
     @Override
     public void setEnergyParameters(List<Double> parameters, double externaFieldAngle) {
         Ce = parameters.get(0);
-        Cn = parameters;
-        externalFieldAngle = externaFieldAngle;
+        latticeParametersImpl.setExternalFieldAngle(externaFieldAngle);
+        latticeParametersImpl.setCn(parameters);
     }
 
     @Override
@@ -92,57 +90,26 @@ public class MCSimulation implements main.Simulation {
 
     private double calculateEi(int[][] lattice, int i_row, int i_col) {
         double Ei = 0;
-        for (int n = 1; n < Cn.size(); n++) {
-            if (Cn.get(n) == 0) {
+        for (int n = 1; n < latticeParametersImpl.Cn().size(); n++) {
+            if (latticeParametersImpl.Cn().get(n) == 0) {
                 continue;
             }
             ArrayList<Integer> neighboursStates = MCHelperSingleton.getInstance().getNeighboursStates(lattice, i_row, i_col, n);
             for (int j = 0; j < neighboursStates.size(); j++) { 
                 double alphaI = MCHelperSingleton.getInstance().getAngleInRadians(lattice[i_row][i_col], latticeParametersImpl.states());
                 double alphaJ = MCHelperSingleton.getInstance().getAngleInRadians(neighboursStates.get(j), latticeParametersImpl.states());
-                Ei -= Cn.get(n) * Math.cos(alphaI - alphaJ);
+                Ei -= latticeParametersImpl.Cn().get(n) * Math.cos(alphaI - alphaJ);
             }
         }
         return Ei;
     }
 
     private double calculateTotalEnergy(int[][] lattice) {
-        double totalEnergy = -0.5;
-        double nSum = 0;
-        for (int n = 1; n < Cn.size(); n++) {
-            if (Cn.get(n) == 0) {
-                continue;
-            }
-            double iSum = 0;
-            for (int i_row = 0; i_row < Math.sqrt(magnetsCount); i_row++) {
-                for (int i_col = 0; i_col < Math.sqrt(magnetsCount); i_col++) {
-                    ArrayList<Integer> neighboursStates = MCHelperSingleton.getInstance().getNeighboursStates(lattice, i_row, i_col, n);
-                    double jSum = 0;
-                    for (int j = 0; j < neighboursStates.size(); j++) {
-                        double alphaI = MCHelperSingleton.getInstance().getAngleInRadians(lattice[i_row][i_col], latticeParametersImpl.states());
-                        double alphaJ = MCHelperSingleton.getInstance().getAngleInRadians(neighboursStates.get(j), latticeParametersImpl.states());
-                        jSum +=  Math.cos(alphaI - alphaJ);
-                    }
-                    iSum += jSum;
-                }
-            }
-            iSum *= Cn.get(n);
-            nSum += iSum;
-        }
-        totalEnergy *= nSum;
+        TotalEnergy totalEnergy = new NoSubtractTotalEnergy();
         if (Ce != 0) {
-            double subtract = Ce;
-            double iSum = 0;
-            for (int i_row = 0; i_row < Math.sqrt(magnetsCount); i_row++) {
-                for (int i_col = 0; i_col < Math.sqrt(magnetsCount); i_col++) {
-                    double alphaI = MCHelperSingleton.getInstance().getAngleInRadians(lattice[i_row][i_col], latticeParametersImpl.states());
-                    iSum += Math.cos(alphaI - externalFieldAngle);
-                }
-            }
-            subtract *= iSum;
-            totalEnergy -= subtract;
+            totalEnergy = new SubtractDecorator(totalEnergy);
         }
-        return totalEnergy;
+        return totalEnergy.calculate(latticeParametersImpl, -0.5);
     }
 
     private double calculateOrderParameter() {
@@ -204,6 +171,8 @@ public class MCSimulation implements main.Simulation {
         private double _totalEnergy = 0;
         private int[][] _lattice;
         private int _states;
+        private double _externalFieldAngle;
+        private List<Double> _Cn;
 
         @Override
         public double totalEnergy() {
@@ -232,6 +201,14 @@ public class MCSimulation implements main.Simulation {
             return _states;
         }
 
+        public double externalFieldAngle() {
+            return _externalFieldAngle;
+        }
+
+        public List<Double> Cn() {
+            return _Cn;
+        }
+
         protected void setLattice(int[][] lattice) {
             _lattice = new int[lattice.length][lattice.length];
             for (int i = 0; i < lattice.length; i++) {
@@ -247,6 +224,14 @@ public class MCSimulation implements main.Simulation {
 
         protected void setTotalEnergy(double totalEnergy) {
             _totalEnergy = totalEnergy;
+        }
+
+        protected void setExternalFieldAngle(double externalFieldAngle) {
+            this._externalFieldAngle = externalFieldAngle;
+        }
+
+        protected void setCn(List<Double> Cn) {
+            this._Cn = Cn;
         }
     }
 }
