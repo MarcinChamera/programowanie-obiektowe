@@ -4,9 +4,9 @@ public class SubtractDecorator extends TotalEnergyDecorator {
         super(totalEnergy);
     }
 
+    @Override
     public double calculate(MCSimulation.LatticeParametersImpl latticeParametersImpl, double currentResult) {
-        currentResult = super.calculate(latticeParametersImpl, currentResult);
-        return subtract(latticeParametersImpl, currentResult);
+        return subtract(latticeParametersImpl, super.calculate(latticeParametersImpl, currentResult));
     }
 
     private double subtract(MCSimulation.LatticeParametersImpl latticeParametersImpl, double currentResult) {

@@ -2,6 +2,7 @@ import java.util.ArrayList;
 
 public class NoSubtractTotalEnergy implements TotalEnergy {
 
+    @Override
     public double calculate(MCSimulation.LatticeParametersImpl latticeParametersImpl,  double currentResult) {
         int[][] lattice = latticeParametersImpl.lattice();
         int magnetsCount = lattice.length * lattice.length;
